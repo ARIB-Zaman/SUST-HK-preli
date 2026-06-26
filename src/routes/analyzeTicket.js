@@ -1,24 +1,25 @@
 const { Router } = require("express");
 const validateTicket = require("../middleware/validateTicket");
+const { analyzeTicket, GeminiServiceError } = require("../services/geminiService");
 
 const router = Router();
 
 // POST /analyze-ticket
 router.post("/", validateTicket, async (req, res) => {
   try {
-    const { ticket_id } = req.body;
+    const result = await analyzeTicket(req.body);
+    return res.status(200).json(result);
 
-    // TODO: pass validated payload to LLM service layer here
-
-    // Placeholder 200 — replace with real LLM response once service is wired up
-    res.status(200).json({
-      ticket_id,
-      status: "received",
-      message: "Ticket accepted and queued for analysis.",
-    });
   } catch (err) {
+    if (err instanceof GeminiServiceError) {
+      // Log full details server-side (cause + rawOutput may contain secrets)
+      console.error("[analyze-ticket] Gemini error:", err.message, err.cause, err.rawOutput);
+      return res.status(500).json({ error: "Failed to process ticket with AI service. Please try again later." });
+    }
+
+    // Unexpected JS error
     console.error("[analyze-ticket] Unexpected error:", err);
-    res.status(500).json({ error: "An unexpected error occurred. Please try again later." });
+    return res.status(500).json({ error: "An unexpected error occurred. Please try again later." });
   }
 });
 
