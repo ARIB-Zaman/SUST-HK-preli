@@ -23,13 +23,14 @@ const CASE_TYPES = [
 ];
 
 // ── § 7.2  Department taxonomy ─────────────────────────────────────────────
+// Departments are NOT chosen freely — they are derived from the case_type.
 const DEPARTMENTS = [
-  "dispute_resolution",
-  "fraud_investigation",
   "customer_support",
-  "merchant_support",
-  "field_agent_support",
-  "compliance",
+  "dispute_resolution",
+  "payments_ops",
+  "merchant_operations",
+  "agent_operations",
+  "fraud_risk",
 ];
 
 // ── Output schema description (injected verbatim into the prompt) ──────────
@@ -117,13 +118,24 @@ severity
   medium    — failed payments, refund requests without evidence, or amounts 100–999 BDT.
   low       — general inquiries, very small amounts (< 100 BDT), or no financial impact.
 
-department — choose exactly one:
-  dispute_resolution          — Money sent to wrong recipient, refund requests, duplicate payments.
-  fraud_investigation         — Phishing, social engineering, suspicious activity.
-  customer_support            — General inquiries, payment failures, low-severity cases.
-  merchant_support            — Merchant settlement delays, merchant-related issues.
-  field_agent_support         — Agent cash-in issues, field agent disputes.
-  compliance                  — High-risk cases requiring regulatory attention.
+department — MUST be derived directly from the case_type you already assigned above.
+  Do NOT invent a department independently. Use this strict lookup table:
+
+  case_type → department
+  ─────────────────────────────────────────────────────────────────────
+  wrong_transfer                  → dispute_resolution
+  refund_request (contested)      → dispute_resolution
+  refund_request (low severity,   → customer_support
+    vague, or insufficient data)
+  payment_failed                  → payments_ops
+  duplicate_payment               → payments_ops
+  merchant_settlement_delay       → merchant_operations
+  agent_cash_in_issue             → agent_operations
+  phishing_or_social_engineering  → fraud_risk
+  other                           → customer_support
+  ─────────────────────────────────────────────────────────────────────
+  Valid department values: customer_support | dispute_resolution |
+    payments_ops | merchant_operations | agent_operations | fraud_risk
 
 human_review_required
   Set to true for: disputes, suspicious/fraud cases, high-value cases, or ambiguous evidence.
